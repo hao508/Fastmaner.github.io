@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <link rel="icon" type="image/png" href="favicon.png">
     <meta charset="UTF-8">
-    <title>Fastman - Quay Tên Tùy Chỉnh</title>
+    <title>Fastman - Quay Tên Lớp Học (50 Ô)</title>
     <style>
         body {
             background-color: #1a1a1a;
@@ -15,52 +13,47 @@
             align-items: center;
         }
 
-        /* Khung chứa game */
         #game-container {
             position: relative;
-            width: 800px;
-            height: 450px;
+            width: 90%; /* Tăng chiều rộng để chứa nhiều ô hơn */
+            max-width: 1000px;
+            height: 600px;
             border: 4px solid #0051ff;
             background: black;
             overflow: hidden;
             margin-top: 10px;
         }
 
-        /* Hàng 10 cửa */
-        #door-row {
+        /* Khu vực chứa các ô cửa dạng lưới */
+        #door-grid {
             display: flex;
+            flex-wrap: wrap; /* Cho phép rớt dòng */
             width: 100%;
-            height: 50px;
-            position: absolute;
-            top: 0;
+            background: #222;
         }
 
         .door {
-            flex: 1;
+            width: calc(10% - 2px); /* 10 cột mỗi hàng */
+            height: 40px;
             border: 1px solid #333;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             background: #222;
+            box-sizing: border-box;
             overflow: hidden;
+            text-align: center;
         }
 
-        /* Nhân vật Fastman dùng ảnh */
-        /* Nhân vật Fastman được vẽ hoàn toàn bằng code CSS */
         #fastman {
             position: absolute;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             background-color: #f1c40f;
-            /* Màu vàng đặc trưng */
             border-radius: 50%;
             z-index: 10;
-
-            /* Tạo hình cái miệng đang mở */
             clip-path: polygon(100% 0%, 100% 35%, 50% 50%, 100% 65%, 100% 100%, 0% 100%, 0% 0%);
-
-            /* Hiệu ứng mắt cho sinh động */
             display: flex;
             justify-content: center;
         }
@@ -68,183 +61,124 @@
         #fastman::after {
             content: '';
             position: absolute;
-            top: 8px;
-            left: 22px;
-            width: 6px;
-            height: 6px;
+            top: 6px;
+            left: 18px;
+            width: 4px;
+            height: 4px;
             background-color: black;
             border-radius: 50%;
         }
 
-        /* Khu vực nhập tên và điều khiển */
-        .controls {
-            margin: 20px;
-            text-align: center;
-            width: 800px;
-        }
-
-        textarea {
-            width: 100%;
-            height: 60px;
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        button {
-            padding: 10px 25px;
-            background: #f1c40f;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            border-radius: 5px;
-        }
-
-        #counter {
-            font-size: 24px;
-            color: #f1c40f;
-            margin-top: 10px;
-            font-weight: bold;
-        }
+        .controls { margin: 20px; text-align: center; width: 800px; }
+        textarea { width: 100%; height: 80px; background: #333; color: white; border: 1px solid #555; padding: 10px; }
+        button { padding: 10px 25px; background: #f1c40f; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        #counter { font-size: 20px; color: #f1c40f; margin-top: 10px; }
     </style>
 </head>
-
 <body>
 
-    <h1>Fastman: Quay Tên Trả Bài</h1>
+    <h1>Fastman: Quay Tên 50 Học Sinh</h1>
 
     <div class="controls">
-        <p>Nhập danh sách tên (mỗi tên 1 dòng, tối đa 10 tên):</p>
-        <textarea id="nameInput">An
-Bình
-Chi
-Dương
-Em
-Giang
-Hoa
-Hùng
-Linh
-Nam</textarea>
+        <p>Nhập danh sách tên (mỗi tên 1 dòng):</p>
+        <textarea id="nameInput" placeholder="Dán danh sách 50 tên vào đây..."></textarea>
         <br>
         <button onclick="setupAndStart()">BẮT ĐẦU QUAY</button>
-        <div id="counter">VA CHẠM: 0 / 10</div>
+        <div id="counter">VA CHẠM: 0 / 15</div>
     </div>
 
     <div id="game-container">
-        <div id="door-row">
-            <!-- 10 ô cửa sẽ được tạo tự động bằng JS -->
-        </div>
-        <div id="fastman"></div>
+        <div id="door-grid"></div>
+        <div id="fastman" style="display:none;"></div>
     </div>
 
     <script>
         const fastman = document.getElementById('fastman');
         const container = document.getElementById('game-container');
+        const doorGrid = document.getElementById('door-grid');
         const counterText = document.getElementById('counter');
-        const doorRow = document.getElementById('door-row');
 
         let posX, posY, vx, vy, bounces = 0;
         let isRunning = false;
-        const size = 40;
+        const size = 30;
+        const maxBounces = 10; // Tăng số lần va chạm cho kịch tính
 
-        // Hàm khởi tạo cửa và bắt đầu
         function setupAndStart() {
             if (isRunning) return;
 
-            // 1. Lấy tên từ textarea và cập nhật vào cửa
             const names = document.getElementById('nameInput').value.split('\n').filter(n => n.trim() !== "");
-            doorRow.innerHTML = "";
-            for (let i = 0; i < 10; i++) {
+            if (names.length === 0) return alert("Vui lòng nhập tên!");
+
+            doorGrid.innerHTML = "";
+            names.forEach(name => {
                 const div = document.createElement('div');
                 div.className = 'door';
-                div.innerText = names[i] || `Trống ${i + 1}`;
-                doorRow.appendChild(div);
-            }
+                div.innerText = name;
+                doorGrid.appendChild(div);
+            });
 
-            // 2. Reset trạng thái
-            posX = container.clientWidth / 2 - size / 2;
-            posY = container.clientHeight - size - 10;
-            vx = (Math.random() > 0.5 ? 6 : -6);
-            vy = -6;
+            // Lấy chiều cao của khu vực lưới cửa để Fastman không va chạm đè lên
+            const gridHeight = doorGrid.offsetHeight;
+
+            posX = container.clientWidth / 2;
+            posY = container.clientHeight - 50;
+            vx = (Math.random() > 0.5 ? 7 : -7);
+            vy = -7;
             bounces = 0;
             isRunning = true;
+            
             fastman.style.display = 'block';
             fastman.style.transition = 'none';
-            updateDisplay();
-
-            requestAnimationFrame(move);
+            
+            animate();
         }
 
-        function updateDisplay() {
-            counterText.innerText = `VA CHẠM: ${bounces} / 10`;
-            fastman.style.left = posX + 'px';
-            fastman.style.top = posY + 'px';
-        }
-
-        function move() {
+        function animate() {
             if (!isRunning) return;
 
             posX += vx;
             posY += vy;
 
-            // Va chạm tường trái/phải
-            if (posX <= 0 || posX >= container.clientWidth - size) {
-                vx *= -1;
-                registerBounce();
-            }
+            // Va chạm biên
+            if (posX <= 0 || posX >= container.clientWidth - size) vx *= -1;
+            if (posY >= container.clientHeight - size) vy *= -1;
 
-            // Va chạm tường dưới
-            if (posY >= container.clientHeight - size) {
+            // Va chạm với cạnh dưới của lưới cửa
+            const gridBottom = doorGrid.offsetHeight;
+            if (posY <= gridBottom && bounces < maxBounces) {
                 vy *= -1;
-                registerBounce();
+                bounces++;
+                counterText.innerText = `VA CHẠM: ${bounces} / ${maxBounces}`;
             }
 
-            // Va chạm tường trên (chặn lại ở khu vực cửa)
-            if (posY <= 50 && bounces < 10) {
-                vy *= -1;
-                posY = 50;
-                registerBounce();
-            }
+            fastman.style.left = posX + 'px';
+            fastman.style.top = posY + 'px';
 
-            updateDisplay();
-
-            if (bounces < 10) {
-                requestAnimationFrame(move);
+            if (bounces < maxBounces) {
+                requestAnimationFrame(animate);
             } else {
                 finish();
             }
         }
 
-        function registerBounce() {
-            bounces++;
-            if (bounces > 10) bounces = 10;
-            counterText.innerText = `VA CHẠM: ${bounces} / 10`;
-        }
-
         function finish() {
             isRunning = false;
             const doors = document.querySelectorAll('.door');
-            const winIndex = Math.floor(Math.random() * 10);
-            const targetDoor = doors[winIndex];
+            const winIndex = Math.floor(Math.random() * doors.length);
+            const target = doors[winIndex];
 
-            // Bay vào ô thắng cuộc
-            const targetX = targetDoor.offsetLeft + (targetDoor.clientWidth / 2) - (size / 2);
-            const targetY = targetDoor.offsetTop + (targetDoor.clientHeight / 2) - (size / 2);
-
-            fastman.style.transition = "all 0.6s ease-out";
-            fastman.style.left = targetX + 'px';
-            fastman.style.top = targetY + 'px';
+            // Di chuyển đến ô thắng
+            fastman.style.transition = "all 0.8s cubic-bezier(0.25, 0.1, 0.25, 1)";
+            fastman.style.left = (target.offsetLeft + target.clientWidth/2 - size/2) + 'px';
+            fastman.style.top = (target.offsetTop + target.clientHeight/2 - size/2) + 'px';
 
             setTimeout(() => {
-                targetDoor.style.background = "#f1c40f";
-                targetDoor.style.color = "black";
-                alert("Người được chọn: " + targetDoor.innerText);
-            }, 700);
+                target.style.background = "#f1c40f";
+                target.style.color = "black";
+                target.style.fontWeight = "bold";
+                alert("Chúc mừng: " + target.innerText);
+            }, 900);
         }
     </script>
 </body>
-
 </html>
