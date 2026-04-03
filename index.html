@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Fastman - Quay Tên Tùy Chỉnh</title>
+    <style>
+        body { background-color: #1a1a1a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Khung chứa game */
+        #game-container { position: relative; width: 800px; height: 450px; border: 4px solid #0051ff; background: black; overflow: hidden; margin-top: 10px; }
+        
+        /* Hàng 10 cửa */
+        #door-row { display: flex; width: 100%; height: 50px; position: absolute; top: 0; }
+        .door { flex: 1; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 11px; background: #222; overflow: hidden; }
+
+        /* Nhân vật Fastman dùng ảnh */
+        /* Nhân vật Fastman được vẽ hoàn toàn bằng code CSS */
+#fastman {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background-color: #f1c40f; /* Màu vàng đặc trưng */
+    border-radius: 50%;
+    z-index: 10;
+    
+    /* Tạo hình cái miệng đang mở */
+    clip-path: polygon(100% 0%, 100% 35%, 50% 50%, 100% 65%, 100% 100%, 0% 100%, 0% 0%);
+    
+    /* Hiệu ứng mắt cho sinh động */
+    display: flex;
+    justify-content: center;
+}
+
+#fastman::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 22px;
+    width: 6px;
+    height: 6px;
+    background-color: black;
+    border-radius: 50%;
+}
+
+        /* Khu vực nhập tên và điều khiển */
+        .controls { margin: 20px; text-align: center; width: 800px; }
+        textarea { width: 100%; height: 60px; background: #333; color: white; border: 1px solid #555; padding: 10px; border-radius: 5px; }
+        button { padding: 10px 25px; background: #f1c40f; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; border-radius: 5px; }
+        #counter { font-size: 24px; color: #f1c40f; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Fastman: Quay Tên Trả Bài</h1>
+
+    <div class="controls">
+        <p>Nhập danh sách tên (mỗi tên 1 dòng, tối đa 10 tên):</p>
+        <textarea id="nameInput">An
+Bình
+Chi
+Dương
+Em
+Giang
+Hoa
+Hùng
+Linh
+Nam</textarea>
+        <br>
+        <button onclick="setupAndStart()">BẮT ĐẦU QUAY</button>
+        <div id="counter">VA CHẠM: 0 / 10</div>
+    </div>
+
+    <div id="game-container">
+        <div id="door-row">
+            <!-- 10 ô cửa sẽ được tạo tự động bằng JS -->
+        </div>
+        <div id="fastman"></div>
+    </div>
+
+    <script>
+        const fastman = document.getElementById('fastman');
+        const container = document.getElementById('game-container');
+        const counterText = document.getElementById('counter');
+        const doorRow = document.getElementById('door-row');
+        
+        let posX, posY, vx, vy, bounces = 0;
+        let isRunning = false;
+        const size = 40;
+
+        // Hàm khởi tạo cửa và bắt đầu
+        function setupAndStart() {
+            if (isRunning) return;
+
+            // 1. Lấy tên từ textarea và cập nhật vào cửa
+            const names = document.getElementById('nameInput').value.split('\n').filter(n => n.trim() !== "");
+            doorRow.innerHTML = "";
+            for (let i = 0; i < 10; i++) {
+                const div = document.createElement('div');
+                div.className = 'door';
+                div.innerText = names[i] || `Trống ${i+1}`;
+                doorRow.appendChild(div);
+            }
+
+            // 2. Reset trạng thái
+            posX = container.clientWidth / 2 - size / 2;
+            posY = container.clientHeight - size - 10;
+            vx = (Math.random() > 0.5 ? 6 : -6);
+            vy = -6;
+            bounces = 0;
+            isRunning = true;
+            fastman.style.display = 'block';
+            fastman.style.transition = 'none';
+            updateDisplay();
+            
+            requestAnimationFrame(move);
+        }
+
+        function updateDisplay() {
+            counterText.innerText = `VA CHẠM: ${bounces} / 10`;
+            fastman.style.left = posX + 'px';
+            fastman.style.top = posY + 'px';
+        }
+
+        function move() {
+            if (!isRunning) return;
+
+            posX += vx;
+            posY += vy;
+
+            // Va chạm tường trái/phải
+            if (posX <= 0 || posX >= container.clientWidth - size) {
+                vx *= -1;
+                registerBounce();
+            }
+
+            // Va chạm tường dưới
+            if (posY >= container.clientHeight - size) {
+                vy *= -1;
+                registerBounce();
+            }
+
+            // Va chạm tường trên (chặn lại ở khu vực cửa)
+            if (posY <= 50 && bounces < 10) {
+                vy *= -1;
+                posY = 50;
+                registerBounce();
+            }
+
+            updateDisplay();
+
+            if (bounces < 10) {
+                requestAnimationFrame(move);
+            } else {
+                finish();
+            }
+        }
+
+        function registerBounce() {
+            bounces++;
+            if (bounces > 10) bounces = 10;
+            counterText.innerText = `VA CHẠM: ${bounces} / 10`;
+        }
+
+        function finish() {
+            isRunning = false;
+            const doors = document.querySelectorAll('.door');
+            const winIndex = Math.floor(Math.random() * 10);
+            const targetDoor = doors[winIndex];
+
+            // Bay vào ô thắng cuộc
+            const targetX = targetDoor.offsetLeft + (targetDoor.clientWidth / 2) - (size / 2);
+            const targetY = targetDoor.offsetTop + (targetDoor.clientHeight / 2) - (size / 2);
+
+            fastman.style.transition = "all 0.6s ease-out";
+            fastman.style.left = targetX + 'px';
+            fastman.style.top = targetY + 'px';
+
+            setTimeout(() => {
+                targetDoor.style.background = "#f1c40f";
+                targetDoor.style.color = "black";
+                alert("Người được chọn: " + targetDoor.innerText);
+            }, 700);
+        }
+    </script>
+</body>
+</html>
