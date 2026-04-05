@@ -118,7 +118,7 @@
         let posX, posY, vx, vy, bounces = 0;
         let isRunning = false;
         const size = 30;
-        const maxBounces = 10;
+        const maxBounces = 15;
 
         function setupAndStart() {
             if (isRunning) return;
@@ -182,13 +182,17 @@
                 vy *= -1;
                 hit = true;
             }
+            
+        if (hit && bounces < maxBounces) {
+            bounces++;
 
-            if (hit) {
-                bounces++;
+            if (bounceSound.paused) {
                 bounceSound.currentTime = 0;
                 bounceSound.play();
-                counterText.innerText = `VA CHẠM: ${bounces} / ${maxBounces}`;
-            }
+    }
+
+            counterText.innerText = `VA CHẠM: ${bounces} / ${maxBounces}`;
+}
 
             fastman.style.left = posX + 'px';
             fastman.style.top = posY + 'px';
